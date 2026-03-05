@@ -10,7 +10,7 @@ type Item = {
   nama: string;
   kuantiti: number;
   unit: string;
-  unit_khas_nilai?: number;
+  unit_khas_nilai?: string; // ✅ string untuk elak input mobile jadi pelik
   unit_khas?: string;
 };
 
@@ -42,8 +42,21 @@ export default function BookingForm() {
     if (eksperimenId) {
       const exp = experiments.find((e) => e.id === eksperimenId);
       if (exp) {
-        setBahanList(exp.default_bahan.map((b) => ({ ...b, kuantiti: b.kuantiti * bilKumpulan })));
-        setRadasList(exp.default_radas.map((r) => ({ ...r, kuantiti: r.kuantiti * bilKumpulan })));
+        setBahanList(
+          exp.default_bahan.map((b) => ({
+            ...b,
+            kuantiti: b.kuantiti * bilKumpulan,
+            unit_khas_nilai: b.unit_khas_nilai !== undefined ? String(b.unit_khas_nilai) : '',
+          }))
+        );
+
+        setRadasList(
+          exp.default_radas.map((r) => ({
+            ...r,
+            kuantiti: r.kuantiti * bilKumpulan,
+            unit_khas_nilai: r.unit_khas_nilai !== undefined ? String(r.unit_khas_nilai) : '',
+          }))
+        );
       }
     } else {
       setBahanList([]);
@@ -61,14 +74,22 @@ export default function BookingForm() {
       const newBahan = await Promise.all(
         exp.default_bahan.map(async (b) => {
           const qty = await predictQuantity(b.nama, b.kuantiti, bilKumpulan, 'bahan');
-          return { ...b, kuantiti: qty };
+          return {
+            ...b,
+            kuantiti: qty,
+            unit_khas_nilai: b.unit_khas_nilai !== undefined ? String(b.unit_khas_nilai) : '',
+          };
         })
       );
 
       const newRadas = await Promise.all(
         exp.default_radas.map(async (r) => {
           const qty = await predictQuantity(r.nama, r.kuantiti, bilKumpulan, 'radas');
-          return { ...r, kuantiti: qty };
+          return {
+            ...r,
+            kuantiti: qty,
+            unit_khas_nilai: r.unit_khas_nilai !== undefined ? String(r.unit_khas_nilai) : '',
+          };
         })
       );
 
@@ -89,6 +110,17 @@ export default function BookingForm() {
     const exp = experiments.find((e) => e.id === eksperimenId);
     if (!exp) return;
 
+    // ✅ convert balik saiz (string) kepada number bila simpan
+    const bahanConverted = bahanList.map((x) => ({
+      ...x,
+      unit_khas_nilai: x.unit_khas_nilai && x.unit_khas_nilai !== '' ? Number(x.unit_khas_nilai) : undefined,
+    }));
+
+    const radasConverted = radasList.map((x) => ({
+      ...x,
+      unit_khas_nilai: x.unit_khas_nilai && x.unit_khas_nilai !== '' ? Number(x.unit_khas_nilai) : undefined,
+    }));
+
     addBooking({
       guru_id: user.id,
       guru_name: user.name,
@@ -101,8 +133,8 @@ export default function BookingForm() {
       tarikh,
       masa,
       bilangan_kumpulan: bilKumpulan,
-      senarai_bahan: bahanList,
-      senarai_radas: radasList,
+      senarai_bahan: bahanConverted as any,
+      senarai_radas: radasConverted as any,
       lain_lain: lainLain,
       catatan_guru: catatanGuru,
     });
@@ -172,12 +204,17 @@ export default function BookingForm() {
           {item.unit}
         </div>
 
+        {/* ✅ Saiz: guna text + numeric keyboard supaya boleh taip 200 terus */}
         <input
-          type="number"
-          min={0}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           placeholder="Saiz"
           value={item.unit_khas_nilai ?? ''}
-          onChange={(e) => handleItemChange(type, idx, 'unit_khas_nilai', Number(e.target.value))}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^\d]/g, '');
+            handleItemChange(type, idx, 'unit_khas_nilai', v);
+          }}
           className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
         />
 
@@ -353,11 +390,7 @@ export default function BookingForm() {
                 disabled={isCalculating}
                 className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg font-medium hover:bg-indigo-100 transition-colors disabled:opacity-50"
               >
-                {isCalculating ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
+                {isCalculating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Kira Kuantiti AI
               </button>
             </div>
