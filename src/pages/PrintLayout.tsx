@@ -28,6 +28,14 @@ export default function PrintLayout() {
   if (!booking) {
     return <div className="p-8 text-center text-red-500">Tempahan tidak dijumpai.</div>;
   }
+  // ✅ Sekat akses: Guru hanya boleh lihat tempahan sendiri
+if (user?.role === 'Guru' && booking.guru_id !== user.id) {
+  return (
+    <div className="p-8 text-center text-red-500">
+      Tiada akses untuk melihat tempahan ini.
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-slate-100 print:bg-white p-8 print:p-0">
