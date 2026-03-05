@@ -12,6 +12,7 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+// URL Google Script cikgu yang terkini
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSnIL8EVPYdyFcH8RLR-KB7olxDBsq5TVJ3y4muYkYrErf9oTCL5aA8w8cRuj15Zu-xg/exec";
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
@@ -64,12 +65,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       status: 'Pending',
       created_at: new Date().toISOString(),
     };
-    
+
     // Kemaskini skrin terus
     const newBookingsList = [...bookings, newBooking];
     setBookings(newBookingsList);
     localStorage.setItem('smartlab_bookings', JSON.stringify(newBookingsList));
-    
+
     alert(`Notifikasi: Tempahan baru oleh ${newBooking.guru_name} sedang dihantar...`);
 
     // Hantar ke Google Sheets menggunakan kaedah yang betul untuk elak CORS
@@ -82,7 +83,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify(payload)
       });
-      
+
       const result = await response.json();
       if (result.status === 'error') {
         alert("RALAT GOOGLE SCRIPT:\n" + result.message);
@@ -92,6 +93,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Gagal hantar ke Google Sheets:", error);
     }
+  }; // <-- Penutup yang tertinggal sebelum ini
+
   const updateBookingStatus = async (id: string, status: 'Approved' | 'Rejected', catatan_makmal?: string) => {
     // Kemaskini skrin terus
     const updatedBookings = bookings.map(b => b.id === id ? { ...b, status, catatan_makmal } : b);
@@ -122,7 +125,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify(payload)
       });
-      
+
       const result = await response.json();
       if (result.status === 'error') {
         alert("RALAT GOOGLE SCRIPT:\n" + result.message);
@@ -130,6 +133,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Gagal kemaskini Google Sheets:", error);
     }
+  }; // <-- Penutup yang tertinggal sebelum ini
 
   return (
     <DataContext.Provider value={{ experiments, inventory, bookings, addBooking, updateBookingStatus }}>
