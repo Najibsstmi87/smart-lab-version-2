@@ -1,91 +1,118 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Role } from '../types';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Role } from '../types';
 import { mockUsers } from '../lib/mockData';
 
+type StoredUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  password?: string;
+};
+
 interface AuthContextType {
-  user: User | null;
-  login: (email: string) => void;
+  user: StoredUser | null;
+  loading: boolean;
+  login: (email: string, password: string) => boolean;
   logout: () => void;
-  register: (name: string, email: string, role: Role) => void;
+  register: (name: string, email: string, password: string, role: Role) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// SILA MASUKKAN URL GOOGLE SCRIPT CIKGU DI BAWAH INI:
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSnIL8EVPYdyFcH8RLR-KB7olxDBsq5TVJ3y4muYkYrErf9oTCL5aA8w8cRuj15Zu-xg/exec";
+const LOCAL_USER_KEY = 'smartlab_user';
+const LOCAL_REGISTERED_KEY = 'smartlab_registered_users';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
+  const [user, setUser] = useState<StoredUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [registeredUsers, setRegisteredUsers] = useState<StoredUser[]>([]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('smartlab_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    try {
+      const storedUser = localStorage.getItem(LOCAL_USER_KEY);
+      const storedRegistered = localStorage.getItem(LOCAL_REGISTERED_KEY);
+
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+
+      if (storedRegistered) {
+        setRegisteredUsers(JSON.parse(storedRegistered));
+      }
+    } catch (error) {
+      console.error('Gagal baca localStorage auth:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    // Ambil senarai pengguna dari Google Sheets
-    fetch(GOOGLE_SCRIPT_URL)
-      .then(res => res.json())
-      .then(data => {
-        if (data.users && data.users.length > 0) {
-          setRegisteredUsers(data.users);
-        }
-      })
-      .catch(err => console.error("Gagal ambil pengguna:", err));
   }, []);
 
-  const login = (email: string) => {
-    const allUsers = [...mockUsers, ...registeredUsers];
-    const foundUser = allUsers.find(u => u.email === email);
+  const login = (email: string, password: string) => {
+    const emailTrimmed = email.trim().toLowerCase();
+
+    // Demo users: kekalkan demo login mudah
+    const demoUser = mockUsers.find((u) => u.email.toLowerCase() === emailTrimmed);
+    if (demoUser) {
+      setUser(demoUser as StoredUser);
+      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(demoUser));
+      return true;
+    }
+
+    // User berdaftar: wajib semak password
+    const foundUser = registeredUsers.find(
+      (u) => u.email.toLowerCase() === emailTrimmed && u.password === password
+    );
+
     if (foundUser) {
       setUser(foundUser);
-      localStorage.setItem('smartlab_user', JSON.stringify(foundUser));
-    } else {
-      alert('Emel tidak dijumpai. Sila daftar akaun terlebih dahulu atau gunakan emel demo.');
+      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(foundUser));
+      return true;
     }
+
+    const emailExists = registeredUsers.some((u) => u.email.toLowerCase() === emailTrimmed);
+
+    if (emailExists) {
+      alert('Kata laluan salah.');
+    } else {
+      alert('Emel tidak dijumpai. Sila daftar dahulu.');
+    }
+
+    return false;
   };
 
-  const register = async (name: string, email: string, role: Role) => {
+  const register = (name: string, email: string, password: string, role: Role) => {
+    const emailTrimmed = email.trim().toLowerCase();
+
     const allUsers = [...mockUsers, ...registeredUsers];
-    if (allUsers.find(u => u.email === email)) {
-      alert('Emel ini telah didaftarkan! Sila log masuk.');
-      return;
+    if (allUsers.some((u) => u.email.toLowerCase() === emailTrimmed)) {
+      alert('Emel ini telah didaftarkan. Sila log masuk.');
+      return false;
     }
 
-    const newUser: User = {
+    const newUser: StoredUser = {
       id: `u${Date.now()}`,
-      name,
-      email,
-      role
+      name: name.trim(),
+      email: emailTrimmed,
+      password,
+      role,
     };
 
-    const updatedRegistered = [...registeredUsers, newUser];
-    setRegisteredUsers(updatedRegistered);
-    
-    // Auto login selepas daftar
-    setUser(newUser);
-    localStorage.setItem('smartlab_user', JSON.stringify(newUser));
+    const updatedUsers = [...registeredUsers, newUser];
+    setRegisteredUsers(updatedUsers);
+    localStorage.setItem(LOCAL_REGISTERED_KEY, JSON.stringify(updatedUsers));
 
-    // Hantar ke Google Sheets
-    try {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'register', user: newUser })
-      });
-    } catch (error) {
-      console.error("Gagal daftar ke Google Sheets:", error);
-    }
+    setUser(newUser);
+    localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(newUser));
+    return true;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('smartlab_user');
+    localStorage.removeItem(LOCAL_USER_KEY);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, register }}>
       {children}
     </AuthContext.Provider>
   );
@@ -93,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
