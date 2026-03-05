@@ -8,7 +8,6 @@ interface DataContextType {
   bookings: Booking[];
   addBooking: (booking: Omit<Booking, 'id' | 'created_at' | 'status'>) => void;
   updateBookingStatus: (id: string, status: 'Approved' | 'Rejected', catatan_makmal?: string) => void;
-  isLoading: boolean;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -19,48 +18,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [experiments] = useState<Experiment[]>(mockExperiments);
   const [inventory, setInventory] = useState<InventoryItem[]>(mockInventory);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch data from Google Sheets on load
+  // Ambil data hanya sekali bila sistem dibuka
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchData = async () => {
+    // 1. Mula-mula, tunjukkan data dari Local Storage (supaya skrin tak blank)
+    const storedBookings = localStorage.getItem('smartlab_bookings');
+    if (storedBookings) {
       try {
-        const response = await fetch(GOOGLE_SCRIPT_URL);
-        if (!response.ok) throw new Error('Network response was not ok');
-        const data = await response.json();
-        
-        if (isMounted && Array.isArray(data)) {
-          setBookings(data);
-        }
-      } catch (error) {
-        console.error("Error fetching bookings:", error);
-        // Fallback to local storage if Google Sheets fails
-        if (isMounted) {
-          const storedBookings = localStorage.getItem('smartlab_bookings');
-          if (storedBookings) {
-            setBookings(JSON.parse(storedBookings));
-          }
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setBookings(JSON.parse(storedBookings));
+      } catch (e) {
+        console.error("Ralat membaca local storage", e);
       }
-    };
-
-    fetchData();
-    
-    // Load inventory from local storage as fallback
-    const storedInventory = localStorage.getItem('smartlab_inventory');
-    if (storedInventory) {
-      setInventory(JSON.parse(storedInventory));
     }
 
-    return () => {
-      isMounted = false;
-    };
+    const storedInventory = localStorage.getItem('smartlab_inventory');
+    if (storedInventory) {
+      try {
+        setInventory(JSON.parse(storedInventory));
+      } catch (e) {
+        console.error("Ralat membaca inventori", e);
+      }
+    }
+
+    // 2. Kemudian, cuba ambil data terkini dari Google Sheets di belakang tabir
+    fetch(GOOGLE_SCRIPT_URL)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setBookings(data);
+          localStorage.setItem('smartlab_bookings', JSON.stringify(data));
+        }
+      })
+      .catch(err => console.error("Gagal ambil dari Google Sheets:", err));
   }, []);
 
   const saveInventory = (newInventory: InventoryItem[]) => {
@@ -76,87 +65,61 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       created_at: new Date().toISOString(),
     };
     
-    // Optimistic UI update
-    setBookings(prev => [...prev, newBooking]);
-    
-    // Save to local storage as backup
-    localStorage.setItem('smartlab_bookings', JSON.stringify([...bookings, newBooking]));
+    // Kemaskini skrin terus
+    const newBookingsList = [...bookings, newBooking];
+    setBookings(newBookingsList);
+    localStorage.setItem('smartlab_bookings', JSON.stringify(newBookingsList));
     
     alert(`Notifikasi: Tempahan baru oleh ${newBooking.guru_name} sedang dihantar...`);
 
+    // Hantar ke Google Sheets
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        // Use no-cors mode to prevent CORS errors from Google Apps Script
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'add',
-          booking: newBooking
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', booking: newBooking })
       });
-      console.log("Booking sent to Google Sheets");
     } catch (error) {
-      console.error("Error adding booking:", error);
-      alert("Ralat: Gagal menyimpan tempahan ke pangkalan data awan. Data disimpan secara lokal.");
+      console.error("Gagal hantar ke Google Sheets:", error);
     }
   };
 
   const updateBookingStatus = async (id: string, status: 'Approved' | 'Rejected', catatan_makmal?: string) => {
-    // Optimistic UI update
+    // Kemaskini skrin terus
     const updatedBookings = bookings.map(b => b.id === id ? { ...b, status, catatan_makmal } : b);
     setBookings(updatedBookings);
-    
-    // Save to local storage as backup
     localStorage.setItem('smartlab_bookings', JSON.stringify(updatedBookings));
 
     const booking = bookings.find(b => b.id === id);
     if (booking && status === 'Approved') {
-      // Auto deduct inventory
       let currentInventory = [...inventory];
-      
       booking.senarai_bahan.forEach(bahan => {
         const itemIndex = currentInventory.findIndex(i => i.nama_item === bahan.nama);
-        if (itemIndex >= 0) {
-          currentInventory[itemIndex].kuantiti_stok -= bahan.kuantiti;
-        }
+        if (itemIndex >= 0) currentInventory[itemIndex].kuantiti_stok -= bahan.kuantiti;
       });
-      
       booking.senarai_radas.forEach(radas => {
         const itemIndex = currentInventory.findIndex(i => i.nama_item === radas.nama);
-        if (itemIndex >= 0) {
-          currentInventory[itemIndex].kuantiti_stok -= radas.kuantiti;
-        }
+        if (itemIndex >= 0) currentInventory[itemIndex].kuantiti_stok -= radas.kuantiti;
       });
-      
       saveInventory(currentInventory);
     }
 
+    // Hantar ke Google Sheets
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'updateStatus',
-          id: id,
-          status: status,
-          catatan_makmal: catatan_makmal || ""
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateStatus', id: id, status: status, catatan_makmal: catatan_makmal || "" })
       });
-      console.log("Status updated in Google Sheets");
     } catch (error) {
-      console.error("Error updating status:", error);
-      alert("Ralat: Gagal mengemaskini status di pangkalan data awan.");
+      console.error("Gagal kemaskini Google Sheets:", error);
     }
   };
 
   return (
-    <DataContext.Provider value={{ experiments, inventory, bookings, addBooking, updateBookingStatus, isLoading }}>
+    <DataContext.Provider value={{ experiments, inventory, bookings, addBooking, updateBookingStatus }}>
       {children}
     </DataContext.Provider>
   );
