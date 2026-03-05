@@ -1,20 +1,28 @@
 import { GoogleGenAI } from '@google/genai';
 
-// Initialize the Gemini API client
-// Note: In AI Studio, process.env.GEMINI_API_KEY is automatically injected.
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
 export async function predictQuantity(
   itemName: string,
   defaultQuantityPerGroup: number,
   numberOfGroups: number,
   itemType: 'bahan' | 'radas'
 ): Promise<number> {
-  // Base formula
+  // Pengiraan asas (Matematik biasa)
   const baseQuantity = defaultQuantityPerGroup * numberOfGroups;
   
   try {
-    // We use Gemini to suggest if any extra buffer is needed (e.g. for spills, breakages)
+    // Kita semak jika ada API Key. Jika tiada, kita guna pengiraan biasa supaya tak crash.
+    // @ts-ignore - Abaikan ralat typescript untuk import.meta.env
+    const apiKey = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : '';
+    
+    if (!apiKey) {
+      console.warn("API Key Gemini tidak dijumpai. Menggunakan pengiraan biasa.");
+      // Jika bahan (cecair/serbuk), tambah 10% buffer. Jika radas, kekalkan kuantiti asas.
+      return itemType === 'bahan' ? Math.ceil(baseQuantity * 1.1) : baseQuantity;
+    }
+
+    // Jika ada API Key, baru kita hidupkan AI
+    const ai = new GoogleGenAI({ apiKey });
+
     const prompt = `
       Saya sedang menyediakan radas dan bahan untuk eksperimen sains sekolah.
       Item: ${itemName}
@@ -42,9 +50,7 @@ export async function predictQuantity(
     
     return baseQuantity;
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    // Fallback to base formula if AI fails
-    // Add 10% buffer for bahan, 0 buffer for radas as a fallback rule of thumb
+    console.error('Ralat memanggil Gemini API:', error);
     if (itemType === 'bahan') {
       return Math.ceil(baseQuantity * 1.1);
     }
