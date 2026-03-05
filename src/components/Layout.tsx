@@ -13,15 +13,23 @@ import {
 } from 'lucide-react';
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+const { user, logout, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+if (loading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
+      Memuatkan sesi...
+    </div>
+  );
+}
+
+if (!user) {
+  return <Navigate to="/login" replace />;
+}
 
   const handleLogout = () => {
     logout();
