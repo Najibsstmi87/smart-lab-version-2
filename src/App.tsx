@@ -1,7 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
 import { AuthProvider } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
+
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -11,30 +13,61 @@ import BookingList from './pages/BookingList';
 import Analysis from './pages/Analysis';
 import PrintLayout from './pages/PrintLayout';
 
-function App() {
+import { useAuth } from './contexts/AuthContext';
+
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-600">
+        Memuatkan...
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+export default function App() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <DataProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            
-            <Route element={<Layout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/tempahan-baru" element={<BookingForm />} />
-              <Route path="/senarai-tempahan" element={<BookingList />} />
-              <Route path="/analisis" element={<Analysis />} />
+
+            {/* Print pun kena login supaya data & akses terkawal */}
+            <Route
+              path="/print/:id"
+              element={
+                <RequireAuth>
+                  <PrintLayout />
+                </RequireAuth>
+              }
+            />
+
+            {/* Semua page utama dalam Layout */}
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <Layout />
+                </RequireAuth>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="tempahan-baru" element={<BookingForm />} />
+              <Route path="tempahan" element={<BookingList />} />
+              <Route path="analisis" element={<Analysis />} />
             </Route>
-            
-            <Route path="/cetak/:id" element={<PrintLayout />} />
-            
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </BrowserRouter>
-      </DataProvider>
-    </AuthProvider>
+        </DataProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
-
-export default App;
