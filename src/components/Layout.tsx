@@ -28,15 +28,15 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const navItems = useMemo(
-    () => [
-      { path: '/', label: 'Dashboard', icon: Home, roles: ['Guru', 'Pembantu Makmal', 'Ketua Panitia'] },
-      { path: '/tempahan-baru', label: 'Tempahan Baru', icon: CalendarPlus, roles: ['Guru'] },
-      { path: '/senarai-tempahan', label: 'Senarai Tempahan', icon: ClipboardList, roles: ['Pembantu Makmal', 'Ketua Panitia'] },
-      { path: '/analisis', label: 'Analisis', icon: BarChart3, roles: ['Ketua Panitia'] },
-    ],
-    []
-  );
+const navItems = [
+  { path: '/', label: 'Dashboard', icon: Home, roles: ['Guru', 'Pembantu Makmal', 'Ketua Panitia'] },
+  { path: '/tempahan-baru', label: 'Tempahan Baru', icon: CalendarPlus, roles: ['Guru'] },
+
+  // ✅ Bagi Guru akses juga, tapi nanti kita tapis dalam BookingList (guru nampak tempahan sendiri sahaja)
+  { path: '/senarai-tempahan', label: 'Tempahan Saya', icon: ClipboardList, roles: ['Guru', 'Pembantu Makmal', 'Ketua Panitia'] },
+
+  { path: '/analisis', label: 'Analisis', icon: BarChart3, roles: ['Ketua Panitia'] },
+];
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(user.role));
 
