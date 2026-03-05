@@ -72,13 +72,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     
     alert(`Notifikasi: Tempahan baru oleh ${newBooking.guru_name} sedang dihantar...`);
 
-    // Hantar ke Google Sheets
+    // Hantar ke Google Sheets menggunakan kaedah yang betul untuk elak CORS
     try {
+      const payload = { action: 'add', booking: newBooking };
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add', booking: newBooking })
+        // JANGAN guna 'no-cors' jika mahu hantar JSON body. 
+        // Google Apps Script menyokong text/plain untuk elak preflight CORS
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(payload)
       });
     } catch (error) {
       console.error("Gagal hantar ke Google Sheets:", error);
@@ -107,11 +111,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     // Hantar ke Google Sheets
     try {
+      const payload = { action: 'updateStatus', id: id, status: status, catatan_makmal: catatan_makmal || "" };
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'updateStatus', id: id, status: status, catatan_makmal: catatan_makmal || "" })
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(payload)
       });
     } catch (error) {
       console.error("Gagal kemaskini Google Sheets:", error);
