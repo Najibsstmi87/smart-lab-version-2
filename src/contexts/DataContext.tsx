@@ -1,65 +1,80 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Booking, Experiment, InventoryItem } from '../types';
 import { mockExperiments, mockInventory } from '../lib/mockData';
 
-interface DataContextType {
+// SILA MASUKKAN URL GOOGLE SCRIPT CIKGU DI BAWAH INI:
+const GOOGLE_SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbwSnIL8EVPYdyFcH8RLR-KB7olxDBsq5TVJ3y4muYkYrErf9oTCL5aA8w8cRuj15Zu-xg/exec';
+
+type DataContextType = {
   experiments: Experiment[];
   inventory: InventoryItem[];
   bookings: Booking[];
-  addBooking: (booking: Omit<Booking, 'id' | 'created_at' | 'status'>) => void;
-  updateBookingStatus: (id: string, status: 'Approved' | 'Rejected', catatan_makmal?: string) => void;
-}
+  addBooking: (booking: Omit<Booking, 'id' | 'status' | 'created_at'>) => void;
+  updateBookingStatus: (
+    id: string,
+    status: 'Approved' | 'Rejected',
+    catatan_makmal?: string
+  ) => void;
+};
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// SILA MASUKKAN URL GOOGLE SCRIPT CIKGU DI BAWAH INI:
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSnIL8EVPYdyFcH8RLR-KB7olxDBsq5TVJ3y4muYkYrErf9oTCL5aA8w8cRuj15Zu-xg/exec";
+const LS_BOOKINGS = 'smartlab_bookings';
+const LS_INVENTORY = 'smartlab_inventory';
+const LS_EXPERIMENTS = 'smartlab_experiments';
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
 
+  // 1) Restore dari LocalStorage dulu (supaya refresh tak hilang)
   useEffect(() => {
-    // 1. Tunjuk data dari Local Storage dulu
-    const storedBookings = localStorage.getItem('smartlab_bookings');
-    if (storedBookings) setBookings(JSON.parse(storedBookings));
+    try {
+      const storedBookings = localStorage.getItem(LS_BOOKINGS);
+      if (storedBookings) setBookings(JSON.parse(storedBookings));
 
-    const storedInventory = localStorage.getItem('smartlab_inventory');
-    if (storedInventory) setInventory(JSON.parse(storedInventory));
+      const storedInventory = localStorage.getItem(LS_INVENTORY);
+      if (storedInventory) setInventory(JSON.parse(storedInventory));
 
-    const storedExperiments = localStorage.getItem('smartlab_experiments');
-    if (storedExperiments) setExperiments(JSON.parse(storedExperiments));
+      const storedExperiments = localStorage.getItem(LS_EXPERIMENTS);
+      if (storedExperiments) setExperiments(JSON.parse(storedExperiments));
+    } catch (e) {
+      console.error('LocalStorage read failed:', e);
+    }
+  }, []);
 
-    // 2. Ambil data berpusat dari Google Sheets
+  // 2) Sync dari Google Sheets (kalau ada)
+  useEffect(() => {
     fetch(GOOGLE_SCRIPT_URL)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.bookings) {
           setBookings(data.bookings);
-          localStorage.setItem('smartlab_bookings', JSON.stringify(data.bookings));
+          localStorage.setItem(LS_BOOKINGS, JSON.stringify(data.bookings));
         }
 
-        // Sync Inventori
         if (data.inventory && data.inventory.length > 0) {
           setInventory(data.inventory);
-          localStorage.setItem('smartlab_inventory', JSON.stringify(data.inventory));
+          localStorage.setItem(LS_INVENTORY, JSON.stringify(data.inventory));
         } else {
-          // Jika kosong di Sheets, hantar mockData ke Sheets
           setInventory(mockInventory);
+          localStorage.setItem(LS_INVENTORY, JSON.stringify(mockInventory));
           syncInventoryToDB(mockInventory);
         }
 
-        // Sync Eksperimen
         if (data.experiments && data.experiments.length > 0) {
           setExperiments(data.experiments);
-          localStorage.setItem('smartlab_experiments', JSON.stringify(data.experiments));
+          localStorage.setItem(LS_EXPERIMENTS, JSON.stringify(data.experiments));
         } else {
           setExperiments(mockExperiments);
+          localStorage.setItem(LS_EXPERIMENTS, JSON.stringify(mockExperiments));
           syncExperimentsToDB(mockExperiments);
         }
       })
-      .catch(err => console.error("Gagal ambil dari Google Sheets:", err));
+      .catch((err) => console.error('Gagal ambil dari Google Sheets:', err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const syncInventoryToDB = async (inv: InventoryItem[]) => {
@@ -67,9 +82,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'syncInventori', inventory: inv })
+        body: JSON.stringify({ action: 'syncInventori', inventory: inv }),
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error('syncInventori gagal:', e);
+    }
   };
 
   const syncExperimentsToDB = async (exp: Experiment[]) => {
@@ -77,93 +94,100 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'syncEksperimen', experiments: exp })
+        body: JSON.stringify({ action: 'syncEksperimen', experiments: exp }),
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error('syncEksperimen gagal:', e);
+    }
   };
 
   const saveInventory = (newInventory: InventoryItem[]) => {
     setInventory(newInventory);
-    localStorage.setItem('smartlab_inventory', JSON.stringify(newInventory));
-    syncInventoryToDB(newInventory); // Hantar ke Sheets
+    localStorage.setItem(LS_INVENTORY, JSON.stringify(newInventory));
+    syncInventoryToDB(newInventory);
   };
 
-  const addBooking = async (bookingData: Omit<Booking, 'id' | 'created_at' | 'status'>) => {
+  const addBooking = async (bookingData: Omit<Booking, 'id' | 'status' | 'created_at'>) => {
     const newBooking: Booking = {
       ...bookingData,
       id: `b${Date.now()}`,
       status: 'Pending',
       created_at: new Date().toISOString(),
     };
-    
-    // Kemaskini skrin terus
+
+    // Update UI + local
     const newBookingsList = [...bookings, newBooking];
     setBookings(newBookingsList);
-    localStorage.setItem('smartlab_bookings', JSON.stringify(newBookingsList));
-    
-    alert(`Notifikasi: Tempahan baru oleh ${newBooking.guru_name} sedang dihantar...`);
+    localStorage.setItem(LS_BOOKINGS, JSON.stringify(newBookingsList));
 
-    // Hantar ke Google Sheets menggunakan kaedah yang betul untuk elak CORS
+    // Hantar ke Sheets
     try {
-      const payload = { action: 'add', booking: newBooking };
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'add', booking: newBooking }),
       });
     } catch (error) {
-      console.error("Gagal hantar ke Google Sheets:", error);
+      console.error('Gagal hantar ke Google Sheets:', error);
     }
   };
 
-  const updateBookingStatus = async (id: string, status: 'Approved' | 'Rejected', catatan_makmal?: string) => {
-    // Kemaskini skrin terus
-    const updatedBookings = bookings.map(b => b.id === id ? { ...b, status, catatan_makmal } : b);
+  const updateBookingStatus = async (
+    id: string,
+    status: 'Approved' | 'Rejected',
+    catatan_makmal?: string
+  ) => {
+    const updatedBookings = bookings.map((b) =>
+      b.id === id ? { ...b, status, catatan_makmal } : b
+    );
     setBookings(updatedBookings);
-    localStorage.setItem('smartlab_bookings', JSON.stringify(updatedBookings));
+    localStorage.setItem(LS_BOOKINGS, JSON.stringify(updatedBookings));
 
-    const booking = bookings.find(b => b.id === id);
+    // Tolak inventori bila Approved
+    const booking = bookings.find((b) => b.id === id);
     if (booking && status === 'Approved') {
       let currentInventory = [...inventory];
-      booking.senarai_bahan.forEach(bahan => {
-        const itemIndex = currentInventory.findIndex(i => i.nama_item === bahan.nama);
+
+      booking.senarai_bahan.forEach((bahan: any) => {
+        const itemIndex = currentInventory.findIndex((i) => i.nama_item === bahan.nama);
         if (itemIndex >= 0) currentInventory[itemIndex].kuantiti_stok -= bahan.kuantiti;
       });
-      booking.senarai_radas.forEach(radas => {
-        const itemIndex = currentInventory.findIndex(i => i.nama_item === radas.nama);
+
+      booking.senarai_radas.forEach((radas: any) => {
+        const itemIndex = currentInventory.findIndex((i) => i.nama_item === radas.nama);
         if (itemIndex >= 0) currentInventory[itemIndex].kuantiti_stok -= radas.kuantiti;
       });
+
       saveInventory(currentInventory);
     }
 
-    // Hantar ke Google Sheets
+    // Hantar status ke Sheets
     try {
-      const payload = { action: 'updateStatus', id: id, status: status, catatan_makmal: catatan_makmal || "" };
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'updateStatus',
+          id,
+          status,
+          catatan_makmal: catatan_makmal || '',
+        }),
       });
     } catch (error) {
-      console.error("Gagal kemaskini Google Sheets:", error);
+      console.error('Gagal kemaskini Google Sheets:', error);
     }
   };
 
-  return (
-    <DataContext.Provider value={{ experiments, inventory, bookings, addBooking, updateBookingStatus }}>
-      {children}
-    </DataContext.Provider>
+  const value = useMemo(
+    () => ({ experiments, inventory, bookings, addBooking, updateBookingStatus }),
+    [experiments, inventory, bookings]
   );
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
 
 export function useData() {
   const context = useContext(DataContext);
-  if (context === undefined) {
-    throw new Error('useData must be used within a DataProvider');
-  }
+  if (!context) throw new Error('useData must be used within a DataProvider');
   return context;
 }
