@@ -23,11 +23,24 @@ export default function PrintLayout() {
     return () => {
       document.body.classList.remove('print-page');
     };
-  }, []);
+}, [user, navigate]);
 
-  if (!booking) {
-    return <div className="p-8 text-center text-red-500">Tempahan tidak dijumpai.</div>;
-  }
+// ✅ Tunggu data bookings load dulu (penting bila refresh / buka dari homescreen)
+if (!bookings || bookings.length === 0) {
+  return (
+    <div className="p-8 text-center text-slate-500">
+      Memuatkan data tempahan...
+    </div>
+  );
+}
+
+if (!booking) {
+  return (
+    <div className="p-8 text-center text-red-500">
+      Tempahan tidak dijumpai.
+    </div>
+  );
+}
   // ✅ Sekat akses: Guru hanya boleh lihat tempahan sendiri
 if (user?.role === 'Guru' && booking.guru_id !== user.id) {
   return (
