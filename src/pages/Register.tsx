@@ -13,14 +13,8 @@ export default function Register() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // ✅ hantar password sekali
     const ok = register(name, email, password, role);
-
-    // ✅ hanya navigate bila berjaya daftar
-    if (ok) {
-      navigate('/');
-    }
+    if (ok) navigate('/');
   };
 
   return (
