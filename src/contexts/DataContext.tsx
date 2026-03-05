@@ -12,7 +12,7 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwXUyV_aG-GQOYtAQpqSYmdeOZaZMUf7N_wlkZBXlC2aqUF5AH9Co1WeyGYCBgU8f7_Bw/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSnIL8EVPYdyFcH8RLR-KB7olxDBsq5TVJ3y4muYkYrErf9oTCL5aA8w8cRuj15Zu-xg/exec";
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [experiments] = useState<Experiment[]>(mockExperiments);
