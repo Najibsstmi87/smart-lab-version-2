@@ -7,16 +7,16 @@ type StoredUser = {
   name: string;
   email: string;
   role: Role;
-  password?: string;
+  password?: string; // untuk user daftar (local)
 };
 
-interface AuthContextType {
+type AuthContextType = {
   user: StoredUser | null;
   loading: boolean;
   login: (email: string, password: string) => boolean;
   logout: () => void;
   register: (name: string, email: string, password: string, role: Role) => boolean;
-}
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (storedRegistered) {
         setRegisteredUsers(JSON.parse(storedRegistered));
       }
+
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
@@ -50,10 +51,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = (email: string, password: string) => {
     const emailTrimmed = email.trim().toLowerCase();
 
-    // 1) Demo/mock users: allow login without password (optional)
-    // Kalau Najib nak demo users pun wajib password, bagitahu—saya ketatkan.
-    const demoUser = (mockUsers as any[]).find((u) => (u.email || '').toLowerCase() === emailTrimmed);
+    // 1) Demo/mock users: WAJIB password juga (supaya tak bypass)
+    const demoUser = (mockUsers as any[]).find(
+      (u) => (u.email || '').toLowerCase() === emailTrimmed
+    );
+
     if (demoUser) {
+      // kalau mockUsers tak simpan password, kita set default rule:
+      // password mesti sama seperti "1234" (awak boleh tukar)
+      const demoPass = (demoUser.password ?? '1234') as string;
+
+      if (password !== demoPass) {
+        alert('Kata laluan salah.');
+        return false;
+      }
+
       setUser(demoUser);
       localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(demoUser));
       return true;
@@ -70,10 +82,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return true;
     }
 
-    // Better error messages
     const emailExists = registeredUsers.some((u) => u.email.toLowerCase() === emailTrimmed);
     if (emailExists) alert('Kata laluan salah.');
-    else alert('Emel tidak dijumpai. Sila daftar dahulu.');
+    else alert('Emel tidak dijumpai.\nSila daftar dahulu.');
 
     return false;
   };
@@ -82,15 +93,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const emailTrimmed = email.trim().toLowerCase();
     const nameTrimmed = name.trim();
 
-    if (password.length < 4) {
-      alert('Kata laluan terlalu pendek. Minimum 4 aksara.');
+    if (password.trim().length < 4) {
+      alert('Kata laluan terlalu pendek.\nMinimum 4 aksara.');
       return false;
     }
 
     // prevent duplicates across demo + registered
     const all = [...(mockUsers as any[]), ...registeredUsers];
     if (all.some((u) => (u.email || '').toLowerCase() === emailTrimmed)) {
-      alert('Emel ini telah didaftarkan. Sila log masuk.');
+      alert('Emel ini telah didaftarkan.\nSila log masuk.');
       return false;
     }
 
@@ -98,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: `u${Date.now()}`,
       name: nameTrimmed,
       email: emailTrimmed,
-      password,
+      password: password.trim(),
       role,
     };
 
@@ -109,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // auto login after register
     setUser(newUser);
     localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(newUser));
+
     return true;
   };
 
