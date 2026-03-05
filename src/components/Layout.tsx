@@ -27,6 +27,14 @@ if (loading) {
   );
 }
 
+if (loading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
+      Memuatkan sesi...
+    </div>
+  );
+}
+
 if (!user) {
   return <Navigate to="/login" replace />;
 }
