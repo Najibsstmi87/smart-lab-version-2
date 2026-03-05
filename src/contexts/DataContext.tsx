@@ -75,20 +75,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     // Hantar ke Google Sheets menggunakan kaedah yang betul untuk elak CORS
     try {
       const payload = { action: 'add', booking: newBooking };
-      await fetch(GOOGLE_SCRIPT_URL, {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        // JANGAN guna 'no-cors' jika mahu hantar JSON body. 
-        // Google Apps Script menyokong text/plain untuk elak preflight CORS
         headers: {
           'Content-Type': 'text/plain;charset=utf-8',
         },
         body: JSON.stringify(payload)
       });
+      
+      const result = await response.json();
+      if (result.status === 'error') {
+        alert("RALAT GOOGLE SCRIPT:\n" + result.message);
+      } else {
+        console.log("Berjaya dihantar ke Google Sheets dan Emel!");
+      }
     } catch (error) {
       console.error("Gagal hantar ke Google Sheets:", error);
     }
-  };
-
   const updateBookingStatus = async (id: string, status: 'Approved' | 'Rejected', catatan_makmal?: string) => {
     // Kemaskini skrin terus
     const updatedBookings = bookings.map(b => b.id === id ? { ...b, status, catatan_makmal } : b);
@@ -112,17 +115,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     // Hantar ke Google Sheets
     try {
       const payload = { action: 'updateStatus', id: id, status: status, catatan_makmal: catatan_makmal || "" };
-      await fetch(GOOGLE_SCRIPT_URL, {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8',
         },
         body: JSON.stringify(payload)
       });
+      
+      const result = await response.json();
+      if (result.status === 'error') {
+        alert("RALAT GOOGLE SCRIPT:\n" + result.message);
+      }
     } catch (error) {
       console.error("Gagal kemaskini Google Sheets:", error);
     }
-  };
 
   return (
     <DataContext.Provider value={{ experiments, inventory, bookings, addBooking, updateBookingStatus }}>
