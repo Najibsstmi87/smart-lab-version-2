@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -10,9 +10,87 @@ type Item = {
   nama: string;
   kuantiti: number;
   unit: string;
-  unit_khas_nilai?: string; // ✅ string untuk elak input mobile jadi pelik
+  unit_khas_nilai?: string; // string supaya boleh taip 200 tanpa reset fokus
   unit_khas?: string;
 };
+
+function UnitSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full md:w-16 px-2 py-2 md:px-1 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
+    >
+      <option value="">-</option>
+      <option value="ml">ml</option>
+      <option value="l">l</option>
+      <option value="cm">cm</option>
+      <option value="m">m</option>
+      <option value="°C">°C</option>
+      <option value="g">g</option>
+      <option value="kg">kg</option>
+    </select>
+  );
+}
+
+const ItemRow = React.memo(function ItemRow({
+  type,
+  item,
+  idx,
+  onItemChange,
+}: {
+  type: 'bahan' | 'radas';
+  item: Item;
+  idx: number;
+  onItemChange: (type: 'bahan' | 'radas', index: number, field: keyof Item, value: any) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3 md:border-0 md:bg-transparent md:p-0">
+      <div className="text-sm text-slate-700 font-medium md:font-normal md:text-slate-600">
+        {item.nama}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 md:mt-0 md:flex md:items-center md:gap-2">
+        <input
+          type="number"
+          min={1}
+          value={item.kuantiti}
+          onChange={(e) => onItemChange(type, idx, 'kuantiti', Number(e.target.value))}
+          className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
+        />
+
+        <div className="flex items-center justify-center md:justify-start text-xs text-slate-500 md:w-10">
+          {item.unit}
+        </div>
+
+        {/* ✅ Saiz: text + numeric keyboard, dan komponen stabil (tak re-mount) */}
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="Saiz"
+          value={item.unit_khas_nilai ?? ''}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^\d]/g, '');
+            onItemChange(type, idx, 'unit_khas_nilai', v);
+          }}
+          className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
+        />
+
+        <UnitSelect
+          value={item.unit_khas ?? ''}
+          onChange={(v) => onItemChange(type, idx, 'unit_khas', v)}
+        />
+      </div>
+    </div>
+  );
+});
 
 export default function BookingForm() {
   const { user } = useAuth();
@@ -74,22 +152,14 @@ export default function BookingForm() {
       const newBahan = await Promise.all(
         exp.default_bahan.map(async (b) => {
           const qty = await predictQuantity(b.nama, b.kuantiti, bilKumpulan, 'bahan');
-          return {
-            ...b,
-            kuantiti: qty,
-            unit_khas_nilai: b.unit_khas_nilai !== undefined ? String(b.unit_khas_nilai) : '',
-          };
+          return { ...b, kuantiti: qty, unit_khas_nilai: b.unit_khas_nilai !== undefined ? String(b.unit_khas_nilai) : '' };
         })
       );
 
       const newRadas = await Promise.all(
         exp.default_radas.map(async (r) => {
           const qty = await predictQuantity(r.nama, r.kuantiti, bilKumpulan, 'radas');
-          return {
-            ...r,
-            kuantiti: qty,
-            unit_khas_nilai: r.unit_khas_nilai !== undefined ? String(r.unit_khas_nilai) : '',
-          };
+          return { ...r, kuantiti: qty, unit_khas_nilai: r.unit_khas_nilai !== undefined ? String(r.unit_khas_nilai) : '' };
         })
       );
 
@@ -103,6 +173,25 @@ export default function BookingForm() {
     }
   };
 
+  const handleItemChange = useCallback(
+    (type: 'bahan' | 'radas', index: number, field: keyof Item, value: any) => {
+      if (type === 'bahan') {
+        setBahanList((prev) => {
+          const newList = [...prev];
+          newList[index] = { ...newList[index], [field]: value };
+          return newList;
+        });
+      } else {
+        setRadasList((prev) => {
+          const newList = [...prev];
+          newList[index] = { ...newList[index], [field]: value };
+          return newList;
+        });
+      }
+    },
+    []
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !eksperimenId || !tarikh || !masa) return;
@@ -110,7 +199,6 @@ export default function BookingForm() {
     const exp = experiments.find((e) => e.id === eksperimenId);
     if (!exp) return;
 
-    // ✅ convert balik saiz (string) kepada number bila simpan
     const bahanConverted = bahanList.map((x) => ({
       ...x,
       unit_khas_nilai: x.unit_khas_nilai && x.unit_khas_nilai !== '' ? Number(x.unit_khas_nilai) : undefined,
@@ -141,90 +229,6 @@ export default function BookingForm() {
 
     navigate('/');
   };
-
-  const handleItemChange = (type: 'bahan' | 'radas', index: number, field: keyof Item, value: any) => {
-    if (type === 'bahan') {
-      const newList = [...bahanList];
-      newList[index] = { ...newList[index], [field]: value };
-      setBahanList(newList);
-    } else {
-      const newList = [...radasList];
-      newList[index] = { ...newList[index], [field]: value };
-      setRadasList(newList);
-    }
-  };
-
-  const UnitSelect = ({
-    value,
-    onChange,
-  }: {
-    value: string;
-    onChange: (v: string) => void;
-  }) => (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full md:w-16 px-2 py-2 md:px-1 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
-    >
-      <option value="">-</option>
-      <option value="ml">ml</option>
-      <option value="l">l</option>
-      <option value="cm">cm</option>
-      <option value="m">m</option>
-      <option value="°C">°C</option>
-      <option value="g">g</option>
-      <option value="kg">kg</option>
-    </select>
-  );
-
-  const ItemRow = ({
-    type,
-    item,
-    idx,
-  }: {
-    type: 'bahan' | 'radas';
-    item: Item;
-    idx: number;
-  }) => (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 md:border-0 md:bg-transparent md:p-0">
-      <div className="text-sm text-slate-700 font-medium md:font-normal md:text-slate-600">
-        {item.nama}
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2 md:mt-0 md:flex md:items-center md:gap-2">
-        <input
-          type="number"
-          min={1}
-          value={item.kuantiti}
-          onChange={(e) => handleItemChange(type, idx, 'kuantiti', Number(e.target.value))}
-          className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
-        />
-
-        <div className="flex items-center justify-center md:justify-start text-xs text-slate-500 md:w-10">
-          {item.unit}
-        </div>
-
-        {/* ✅ Saiz: guna text + numeric keyboard supaya boleh taip 200 terus */}
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          placeholder="Saiz"
-          value={item.unit_khas_nilai ?? ''}
-          onChange={(e) => {
-            const v = e.target.value.replace(/[^\d]/g, '');
-            handleItemChange(type, idx, 'unit_khas_nilai', v);
-          }}
-          className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
-        />
-
-        <UnitSelect
-          value={item.unit_khas ?? ''}
-          onChange={(v) => handleItemChange(type, idx, 'unit_khas', v)}
-        />
-      </div>
-    </div>
-  );
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-6">
@@ -405,7 +409,7 @@ export default function BookingForm() {
                 {radasList.length > 0 ? (
                   <div className="space-y-3">
                     {radasList.map((item, idx) => (
-                      <ItemRow key={idx} type="radas" item={item} idx={idx} />
+                      <ItemRow key={idx} type="radas" item={item} idx={idx} onItemChange={handleItemChange} />
                     ))}
                   </div>
                 ) : (
@@ -422,7 +426,7 @@ export default function BookingForm() {
                 {bahanList.length > 0 ? (
                   <div className="space-y-3">
                     {bahanList.map((item, idx) => (
-                      <ItemRow key={idx} type="bahan" item={item} idx={idx} />
+                      <ItemRow key={idx} type="bahan" item={item} idx={idx} onItemChange={handleItemChange} />
                     ))}
                   </div>
                 ) : (
