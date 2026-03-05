@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FlaskConical } from 'lucide-react';
 import { Role } from '../types';
 
 export default function Register() {
@@ -14,27 +13,34 @@ export default function Register() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    register(name, email, role);
-    navigate('/');
+
+    // ✅ hantar password sekali
+    const ok = register(name, email, password, role);
+
+    // ✅ hanya navigate bila berjaya daftar
+    if (ok) {
+      navigate('/');
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center gap-6">
-          <img 
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Coat_of_arms_of_Malaysia.svg/500px-Coat_of_arms_of_Malaysia.svg.png" 
-            alt="KPM Logo" 
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Coat_of_arms_of_Malaysia.svg/500px-Coat_of_arms_of_Malaysia.svg.png"
+            alt="KPM Logo"
             className="w-20 h-20 object-contain"
             referrerPolicy="no-referrer"
           />
-          <img 
-            src="https://lh3.googleusercontent.com/d/1NJI6pEh_7toHDtSYvl3sWikGeXdUdGXK" 
-            alt="SSMJ Logo" 
+          <img
+            src="https://lh3.googleusercontent.com/d/1NJI6pEh_7toHDtSYvl3sWikGeXdUdGXK"
+            alt="SSMJ Logo"
             className="w-20 h-20 object-contain"
             referrerPolicy="no-referrer"
           />
         </div>
+
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
           Daftar Akaun Baru
         </h2>
@@ -116,6 +122,7 @@ export default function Register() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                  placeholder="Masukkan kata laluan"
                 />
               </div>
             </div>
