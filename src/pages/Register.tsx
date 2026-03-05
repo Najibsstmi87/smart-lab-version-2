@@ -8,6 +8,7 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('Guru');
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -116,9 +117,11 @@ export default function Register() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                  placeholder="Masukkan kata laluan"
                 />
               </div>
+              <p className="mt-2 text-xs text-slate-500">
+                Minimum 4 aksara.
+              </p>
             </div>
 
             <div>
