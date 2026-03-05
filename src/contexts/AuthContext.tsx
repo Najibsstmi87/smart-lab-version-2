@@ -11,6 +11,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// SILA MASUKKAN URL GOOGLE SCRIPT CIKGU DI BAWAH INI:
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSnIL8EVPYdyFcH8RLR-KB7olxDBsq5TVJ3y4muYkYrErf9oTCL5aA8w8cRuj15Zu-xg/exec";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [registeredUsers, setRegisteredUsers] = useState<User[]>([]);
@@ -20,10 +23,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
-    const storedRegistered = localStorage.getItem('smartlab_registered_users');
-    if (storedRegistered) {
-      setRegisteredUsers(JSON.parse(storedRegistered));
-    }
+    
+    // Ambil senarai pengguna dari Google Sheets
+    fetch(GOOGLE_SCRIPT_URL)
+      .then(res => res.json())
+      .then(data => {
+        if (data.users && data.users.length > 0) {
+          setRegisteredUsers(data.users);
+        }
+      })
+      .catch(err => console.error("Gagal ambil pengguna:", err));
   }, []);
 
   const login = (email: string) => {
@@ -37,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = (name: string, email: string, role: Role) => {
+  const register = async (name: string, email: string, role: Role) => {
     const allUsers = [...mockUsers, ...registeredUsers];
     if (allUsers.find(u => u.email === email)) {
       alert('Emel ini telah didaftarkan! Sila log masuk.');
@@ -53,11 +62,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const updatedRegistered = [...registeredUsers, newUser];
     setRegisteredUsers(updatedRegistered);
-    localStorage.setItem('smartlab_registered_users', JSON.stringify(updatedRegistered));
     
     // Auto login selepas daftar
     setUser(newUser);
     localStorage.setItem('smartlab_user', JSON.stringify(newUser));
+
+    // Hantar ke Google Sheets
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'register', user: newUser })
+      });
+    } catch (error) {
+      console.error("Gagal daftar ke Google Sheets:", error);
+    }
   };
 
   const logout = () => {
