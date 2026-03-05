@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
-  const register = (name: string, email: string, password: string, role: Role) => {
+ const register = (name: string, email: string, password: string, role: Role) => {
     const emailTrimmed = email.trim().toLowerCase();
 
     const allUsers = [...mockUsers, ...registeredUsers];
@@ -89,13 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
-    const newUser: StoredUser = {
-      id: `u${Date.now()}`,
-      name: name.trim(),
-      email: emailTrimmed,
-      password,
-      role,
-    };
+    const newUser = {
+  id: `u${Date.now()}`,
+  name,
+  email,
+  password,
+  role
+};
 
     const updatedUsers = [...registeredUsers, newUser];
     setRegisteredUsers(updatedUsers);
