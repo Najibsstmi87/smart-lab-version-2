@@ -21,30 +21,45 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch data from Google Sheets on load
+  // Fetch data ONCE when app starts
   useEffect(() => {
-    const fetchData = async () => {
+    let isMounted = true;
+
+    const loadData = async () => {
       try {
+        // 1. Cuba ambil dari Google Sheets
         const response = await fetch(GOOGLE_SCRIPT_URL);
         const data = await response.json();
-        if (Array.isArray(data)) {
+        
+        if (isMounted && Array.isArray(data)) {
           setBookings(data);
+          // Simpan backup di local storage
+          localStorage.setItem('smartlab_bookings', JSON.stringify(data));
         }
       } catch (error) {
-        console.error("Error fetching bookings:", error);
+        console.error("Gagal ambil dari Google Sheets, guna Local Storage");
+        // 2. Jika gagal, ambil dari local storage
+        if (isMounted) {
+          const storedBookings = localStorage.getItem('smartlab_bookings');
+          if (storedBookings) {
+            setBookings(JSON.parse(storedBookings));
+          }
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    fetchData();
+    loadData();
     
-    // Load inventory from local storage as fallback
+    // Load inventory
     const storedInventory = localStorage.getItem('smartlab_inventory');
     if (storedInventory) {
       setInventory(JSON.parse(storedInventory));
     }
-  }, []);
+  }, []); // <-- Array kosong ini sangat penting untuk elak infinite loop
 
   const saveInventory = (newInventory: InventoryItem[]) => {
     setInventory(newInventory);
@@ -59,64 +74,56 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       created_at: new Date().toISOString(),
     };
     
-    // Optimistic UI update
-    setBookings(prev => [...prev, newBooking]);
+    // Update UI terus (supaya nampak pantas)
+    const newBookingsList = [...bookings, newBooking];
+    setBookings(newBookingsList);
+    localStorage.setItem('smartlab_bookings', JSON.stringify(newBookingsList));
+    
     alert(`Notifikasi: Tempahan baru oleh ${newBooking.guru_name} sedang dihantar...`);
 
+    // Hantar ke Google Sheets di belakang tabir
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({
-          action: 'add',
-          booking: newBooking
-        })
+        mode: 'no-cors', // Penting untuk elak CORS error
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', booking: newBooking })
       });
     } catch (error) {
-      console.error("Error adding booking:", error);
-      alert("Ralat: Gagal menyimpan tempahan ke pangkalan data.");
+      console.error("Gagal hantar ke Google Sheets:", error);
     }
   };
 
   const updateBookingStatus = async (id: string, status: 'Approved' | 'Rejected', catatan_makmal?: string) => {
-    // Optimistic UI update
+    // Update UI terus
     const updatedBookings = bookings.map(b => b.id === id ? { ...b, status, catatan_makmal } : b);
     setBookings(updatedBookings);
+    localStorage.setItem('smartlab_bookings', JSON.stringify(updatedBookings));
 
     const booking = bookings.find(b => b.id === id);
     if (booking && status === 'Approved') {
-      // Auto deduct inventory
       let currentInventory = [...inventory];
-      
       booking.senarai_bahan.forEach(bahan => {
         const itemIndex = currentInventory.findIndex(i => i.nama_item === bahan.nama);
-        if (itemIndex >= 0) {
-          currentInventory[itemIndex].kuantiti_stok -= bahan.kuantiti;
-        }
+        if (itemIndex >= 0) currentInventory[itemIndex].kuantiti_stok -= bahan.kuantiti;
       });
-      
       booking.senarai_radas.forEach(radas => {
         const itemIndex = currentInventory.findIndex(i => i.nama_item === radas.nama);
-        if (itemIndex >= 0) {
-          currentInventory[itemIndex].kuantiti_stok -= radas.kuantiti;
-        }
+        if (itemIndex >= 0) currentInventory[itemIndex].kuantiti_stok -= radas.kuantiti;
       });
-      
       saveInventory(currentInventory);
     }
 
+    // Hantar ke Google Sheets di belakang tabir
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({
-          action: 'updateStatus',
-          id: id,
-          status: status,
-          catatan_makmal: catatan_makmal || ""
-        })
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateStatus', id: id, status: status, catatan_makmal: catatan_makmal || "" })
       });
     } catch (error) {
-      console.error("Error updating status:", error);
-      alert("Ralat: Gagal mengemaskini status di pangkalan data.");
+      console.error("Gagal kemaskini Google Sheets:", error);
     }
   };
 
