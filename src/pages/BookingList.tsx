@@ -1,21 +1,28 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
 import { Printer, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function BookingList() {
   const { bookings, updateBookingStatus } = useData();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<'Approved' | 'Rejected' | null>(null);
   const [catatan, setCatatan] = useState('');
 
+  const isGuru = user?.role === 'Guru';
+
+  // ✅ Guru nampak tempahan sendiri sahaja
+  const visibleBookings = isGuru ? bookings.filter((b) => b.guru_id === user?.id) : bookings;
+
   // Sort by created_at descending
-  const sortedBookings = [...bookings].sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  const sortedBookings = [...visibleBookings].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
   const handlePrint = (id: string) => {
@@ -43,8 +50,12 @@ export default function BookingList() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Senarai Tempahan</h1>
-          <p className="text-slate-500">Urus dan sahkan tempahan makmal.</p>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {isGuru ? 'Tempahan Saya' : 'Senarai Tempahan'}
+          </h1>
+          <p className="text-slate-500">
+            {isGuru ? 'Semak status & cetak borang tempahan anda.' : 'Urus dan sahkan tempahan makmal.'}
+          </p>
         </div>
       </div>
 
@@ -54,7 +65,7 @@ export default function BookingList() {
             <thead>
               <tr className="bg-slate-50 text-slate-600 text-sm font-medium border-b border-slate-200">
                 <th className="px-6 py-4">Tarikh & Masa</th>
-                <th className="px-6 py-4">Guru</th>
+                {!isGuru && <th className="px-6 py-4">Guru</th>}
                 <th className="px-6 py-4">Kelas</th>
                 <th className="px-6 py-4">Eksperimen / Aktiviti</th>
                 <th className="px-6 py-4">Kumpulan</th>
@@ -62,47 +73,64 @@ export default function BookingList() {
                 <th className="px-6 py-4 text-right">Tindakan</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-100">
               {sortedBookings.map((booking) => (
                 <tr key={booking.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
-                    <div className="font-medium text-slate-900">
-                      {format(new Date(booking.tarikh), 'dd MMM yyyy')}
-                    </div>
+                    <div className="font-medium text-slate-900">{format(new Date(booking.tarikh), 'dd MMM yyyy')}</div>
                     <div className="text-sm text-slate-500">{booking.masa}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-slate-900">{booking.guru_name}</div>
-                  </td>
+
+                  {!isGuru && (
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-slate-900">{booking.guru_name}</div>
+                    </td>
+                  )}
+
                   <td className="px-6 py-4">
                     <div className="text-sm text-slate-900">
                       {booking.tingkatan && booking.kelas ? `${booking.tingkatan} ${booking.kelas}` : '-'}
                     </div>
                   </td>
+
                   <td className="px-6 py-4">
                     <div className="text-sm text-slate-900 max-w-xs truncate" title={booking.eksperimen_tajuk}>
                       {booking.eksperimen_tajuk}
                     </div>
+
                     {booking.catatan_guru && (
                       <div className="text-xs text-amber-600 mt-1 truncate max-w-xs" title={booking.catatan_guru}>
                         Catatan: {booking.catatan_guru}
                       </div>
                     )}
+
+                    {booking.catatan_makmal && (
+                      <div className="text-xs text-indigo-600 mt-1 truncate max-w-xs" title={booking.catatan_makmal}>
+                        Makmal: {booking.catatan_makmal}
+                      </div>
+                    )}
                   </td>
-                  <td className="px-6 py-4 text-slate-600">
-                    {booking.bilangan_kumpulan}
-                  </td>
+
+                  <td className="px-6 py-4 text-slate-600">{booking.bilangan_kumpulan}</td>
+
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      booking.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
-                      booking.status === 'Rejected' ? 'bg-red-100 text-red-800' :
-                      'bg-amber-100 text-amber-800'
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        booking.status === 'Approved'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : booking.status === 'Rejected'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
                       {booking.status}
                     </span>
                   </td>
+
                   <td className="px-6 py-4 text-right space-x-2">
-                    {booking.status === 'Pending' && (
+                    {/* ✅ Approve/Reject hanya untuk bukan guru */}
+                    {!isGuru && booking.status === 'Pending' && (
                       <>
                         <button
                           onClick={() => openStatusModal(booking.id, 'Approved')}
@@ -111,6 +139,7 @@ export default function BookingList() {
                         >
                           <Check className="w-5 h-5" />
                         </button>
+
                         <button
                           onClick={() => openStatusModal(booking.id, 'Rejected')}
                           className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
@@ -120,6 +149,8 @@ export default function BookingList() {
                         </button>
                       </>
                     )}
+
+                    {/* ✅ Cetak untuk semua */}
                     <button
                       onClick={() => handlePrint(booking.id)}
                       className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
@@ -130,9 +161,10 @@ export default function BookingList() {
                   </td>
                 </tr>
               ))}
+
               {sortedBookings.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={isGuru ? 6 : 7} className="px-6 py-8 text-center text-slate-500">
                     Tiada tempahan ditemui.
                   </td>
                 </tr>
@@ -143,16 +175,15 @@ export default function BookingList() {
       </div>
 
       {/* Status Update Modal */}
-      {modalOpen && (
+      {modalOpen && !isGuru && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-4">
               {selectedStatus === 'Approved' ? 'Luluskan Tempahan' : 'Tolak Tempahan'}
             </h3>
+
             <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Catatan untuk guru (Pilihan)
-              </label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Catatan untuk guru (Pilihan)</label>
               <textarea
                 value={catatan}
                 onChange={(e) => setCatatan(e.target.value)}
@@ -161,6 +192,7 @@ export default function BookingList() {
                 placeholder="Contoh: Sila ambil kunci di pejabat..."
               />
             </div>
+
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setModalOpen(false)}
@@ -168,6 +200,7 @@ export default function BookingList() {
               >
                 Batal
               </button>
+
               <button
                 onClick={handleStatusUpdate}
                 className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
