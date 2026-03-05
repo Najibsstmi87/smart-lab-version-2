@@ -12,9 +12,7 @@ export default function Login() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const ok = login(email, password);
-    if (ok) {
-      navigate('/');
-    }
+    if (ok) navigate('/');
   };
 
   return (
@@ -25,11 +23,12 @@ export default function Login() {
             <FlaskConical className="w-12 h-12 text-emerald-600" />
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Log Masuk</h2>
+          <p className="mt-2 text-sm text-slate-600">Smart Lab Booking</p>
         </div>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow rounded-xl sm:px-10">
+        <div className="bg-white py-8 px-4 shadow rounded-xl sm:px-10 border border-slate-200">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-slate-700">Alamat Emel</label>
@@ -38,7 +37,7 @@ export default function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                 placeholder="Contoh: najib@sekolah.edu.my"
               />
             </div>
@@ -50,19 +49,17 @@ export default function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 appearance-none block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                 placeholder="Masukkan kata laluan"
               />
             </div>
 
-            <div>
-              <button
-                type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700"
-              >
-                Log Masuk
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700"
+            >
+              Log Masuk
+            </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-600">
