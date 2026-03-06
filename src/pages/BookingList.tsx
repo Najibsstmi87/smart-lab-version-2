@@ -25,9 +25,9 @@ export default function BookingList() {
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
-  const handlePrint = (id: string) => {
-    navigate(`/cetak/${id}`);
-  };
+const handlePrint = (id: string) => {
+  navigate(`/print/${id}`);
+};
 
   const openStatusModal = (id: string, status: 'Approved' | 'Rejected') => {
     setSelectedBookingId(id);
