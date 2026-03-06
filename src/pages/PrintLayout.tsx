@@ -7,10 +7,17 @@ import { FlaskConical, Printer, ArrowLeft } from 'lucide-react';
 
 export default function PrintLayout() {
   const { id } = useParams<{ id: string }>();
-  const { bookings } = useData();
+const { bookings, loading } = useData();
   const navigate = useNavigate();
 
   const booking = bookings.find(b => b.id === id);
+  if (loading) {
+  return (
+    <div className="p-8 text-center text-slate-500">
+      Memuatkan tempahan...
+    </div>
+  );
+}
 
   const { user } = useAuth();
 
@@ -26,10 +33,10 @@ export default function PrintLayout() {
 }, [user, navigate]);
 
 // ✅ Tunggu data bookings load dulu (penting bila refresh / buka dari homescreen)
-if (!bookings || bookings.length === 0) {
+if (!booking && !loading) {
   return (
-    <div className="p-8 text-center text-slate-500">
-      Memuatkan data tempahan...
+    <div className="p-8 text-center text-red-500">
+      Tempahan tidak dijumpai.
     </div>
   );
 }
