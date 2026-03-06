@@ -8,7 +8,7 @@ import { Sparkles, Loader2, Save } from 'lucide-react';
 
 type Item = {
   nama: string;
-  kuantiti: number;
+ kuantiti: number | '';
   unit: string;
   unit_khas_nilai?: string; // string supaya boleh taip 200 tanpa reset fokus
   unit_khas?: string;
