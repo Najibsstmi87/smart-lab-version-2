@@ -83,27 +83,23 @@ const ItemRow = React.memo(function ItemRow({
         </div>
 
         {/* Saiz */}
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          placeholder="Saiz"
-          value={item.unit_khas_nilai ?? ''}
-          onChange={(e) => {
-
-            const v = e.target.value.replace(/[^\d]/g, '');
-
-            onItemChange(
-              type,
-              idx,
-              'unit_khas_nilai',
-              v === '' ? undefined : Number(v)
-            );
-
-          }}
-          className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
-        />
-
+       <input
+  type="number"
+  min={1}
+  value={item.kuantiti === 0 ? '' : item.kuantiti}
+  onFocus={(e) => {
+    if (item.kuantiti === 0) {
+      onItemChange(type, idx, 'kuantiti', '');
+    } else {
+      e.target.select();
+    }
+  }}
+  onChange={(e) => {
+    const v = e.target.value;
+    onItemChange(type, idx, 'kuantiti', v === '' ? 0 : Number(v));
+  }}
+  className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
+/>
         {/* Unit khas */}
         <UnitSelect
           value={item.unit_khas ?? ''}
