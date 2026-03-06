@@ -48,28 +48,41 @@ const ItemRow = React.memo(function ItemRow({
   type: 'bahan' | 'radas';
   item: Item;
   idx: number;
-  onItemChange: (type: 'bahan' | 'radas', index: number, field: keyof Item, value: any) => void;
+  onItemChange: (
+    type: 'bahan' | 'radas',
+    index: number,
+    field: keyof Item,
+    value: any
+  ) => void;
 }) {
+
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 md:border-0 md:bg-transparent md:p-0">
+
+      {/* Nama Item */}
       <div className="text-sm text-slate-700 font-medium md:font-normal md:text-slate-600">
         {item.nama}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 md:mt-0 md:flex md:items-center md:gap-2">
+
+        {/* Kuantiti */}
         <input
           type="number"
           min={1}
           value={item.kuantiti}
-          onChange={(e) => onItemChange(type, idx, 'kuantiti', Number(e.target.value))}
+          onChange={(e) =>
+            onItemChange(type, idx, 'kuantiti', Number(e.target.value))
+          }
           className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
         />
 
+        {/* Unit */}
         <div className="flex items-center justify-center md:justify-start text-xs text-slate-500 md:w-10">
           {item.unit}
         </div>
 
-        {/* ✅ Saiz: text + numeric keyboard, dan komponen stabil (tak re-mount) */}
+        {/* Saiz */}
         <input
           type="text"
           inputMode="numeric"
@@ -77,20 +90,33 @@ const ItemRow = React.memo(function ItemRow({
           placeholder="Saiz"
           value={item.unit_khas_nilai ?? ''}
           onChange={(e) => {
+
             const v = e.target.value.replace(/[^\d]/g, '');
-            onItemChange(type, idx, 'unit_khas_nilai', v);
+
+            onItemChange(
+              type,
+              idx,
+              'unit_khas_nilai',
+              v === '' ? undefined : Number(v)
+            );
+
           }}
           className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
         />
 
+        {/* Unit khas */}
         <UnitSelect
           value={item.unit_khas ?? ''}
-          onChange={(v) => onItemChange(type, idx, 'unit_khas', v)}
+          onChange={(v) =>
+            onItemChange(type, idx, 'unit_khas', v)
+          }
         />
+
       </div>
+
     </div>
   );
-});
+});;
 
 export default function BookingForm() {
   const { user } = useAuth();
