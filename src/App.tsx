@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
@@ -32,42 +32,40 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <DataProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+    <AuthProvider>
+      <DataProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-            {/* Print pun kena login supaya data & akses terkawal */}
-            <Route
-              path="/print/:id"
-              element={
-                <RequireAuth>
-                  <PrintLayout />
-                </RequireAuth>
-              }
-            />
+          {/* Print pun kena login supaya data & akses terkawal */}
+          <Route
+            path="/print/:id"
+            element={
+              <RequireAuth>
+                <PrintLayout />
+              </RequireAuth>
+            }
+          />
 
-            {/* Semua page utama dalam Layout */}
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <Layout />
-                </RequireAuth>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="tempahan-baru" element={<BookingForm />} />
-              <Route path="tempahan" element={<BookingList />} />
-              <Route path="analisis" element={<Analysis />} />
-            </Route>
+          {/* Semua page utama dalam Layout */}
+          <Route
+            path="/"
+            element={
+              <RequireAuth>
+                <Layout />
+              </RequireAuth>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="tempahan-baru" element={<BookingForm />} />
+            <Route path="tempahan" element={<BookingList />} />
+            <Route path="analisis" element={<Analysis />} />
+          </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </DataProvider>
-      </AuthProvider>
-    </BrowserRouter>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </DataProvider>
+    </AuthProvider>
   );
 }
