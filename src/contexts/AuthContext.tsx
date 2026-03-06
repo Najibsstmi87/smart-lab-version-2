@@ -1,127 +1,126 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Role } from '../types';
-import { mockUsers } from '../lib/mockData';
 
 type StoredUser = {
   id: string;
   name: string;
   email: string;
   role: Role;
-  password?: string; // untuk user daftar (local)
 };
 
 type AuthContextType = {
   user: StoredUser | null;
   loading: boolean;
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (name: string, email: string, password: string, role: Role) => boolean;
+  register: (name: string, email: string, password: string, role: Role) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_USER_KEY = 'smartlab_user';
-const LOCAL_REGISTERED_KEY = 'smartlab_registered_users';
+
+const GOOGLE_SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbwSnIL8EVPYdyFcH8RLR-KB7olxDBsq5TVJ3y4muYkYrErf9oTCL5aA8w8cRuj15Zu-xg/exec';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [registeredUsers, setRegisteredUsers] = useState<StoredUser[]>([]);
 
-  // ✅ Restore session + registered users on app start (fix refresh logout)
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem(LOCAL_USER_KEY);
-      const storedRegistered = localStorage.getItem(LOCAL_REGISTERED_KEY);
-
-      if (storedRegistered) {
-        setRegisteredUsers(JSON.parse(storedRegistered));
-      }
-
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (err) {
-      console.error('Auth localStorage read failed:', err);
+      console.error('Auth restore failed:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const login = (email: string, password: string) => {
-    const emailTrimmed = email.trim().toLowerCase();
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify({
+          action: 'loginUser',
+          email,
+          password,
+        }),
+      });
 
-    // 1) Demo/mock users: WAJIB password juga (supaya tak bypass)
-    const demoUser = (mockUsers as any[]).find(
-      (u) => (u.email || '').toLowerCase() === emailTrimmed
-    );
+      const data = await response.json();
 
-    if (demoUser) {
-      // kalau mockUsers tak simpan password, kita set default rule:
-      // password mesti sama seperti "1234" (awak boleh tukar)
-      const demoPass = (demoUser.password ?? '1234') as string;
-
-      if (password !== demoPass) {
-        alert('Kata laluan salah.');
-        return false;
+      if (data.ok && data.user) {
+        setUser(data.user);
+        localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(data.user));
+        return true;
       }
 
-      setUser(demoUser);
-      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(demoUser));
-      return true;
+      if (data.error === 'Wrong password') {
+        alert('Kata laluan salah.');
+      } else if (data.error === 'Email not found') {
+        alert('Emel tidak dijumpai. Sila daftar dahulu.');
+      } else {
+        alert('Login gagal.');
+      }
+
+      return false;
+    } catch (err) {
+      console.error('Login error:', err);
+      alert('Login gagal. Semak sambungan internet atau Apps Script.');
+      return false;
     }
-
-    // 2) Registered users: MUST match password
-    const found = registeredUsers.find(
-      (u) => u.email.toLowerCase() === emailTrimmed && u.password === password
-    );
-
-    if (found) {
-      setUser(found);
-      localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(found));
-      return true;
-    }
-
-    const emailExists = registeredUsers.some((u) => u.email.toLowerCase() === emailTrimmed);
-    if (emailExists) alert('Kata laluan salah.');
-    else alert('Emel tidak dijumpai.\nSila daftar dahulu.');
-
-    return false;
   };
 
-  const register = (name: string, email: string, password: string, role: Role) => {
-    const emailTrimmed = email.trim().toLowerCase();
-    const nameTrimmed = name.trim();
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    role: Role
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify({
+          action: 'registerUser',
+          name,
+          email,
+          password,
+          role,
+        }),
+      });
 
-    if (password.trim().length < 4) {
-      alert('Kata laluan terlalu pendek.\nMinimum 4 aksara.');
+      const data = await response.json();
+
+      if (data.ok && data.user) {
+        setUser(data.user);
+        localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(data.user));
+        return true;
+      }
+
+      if (data.error === 'Email already registered') {
+        alert('Emel ini telah didaftarkan.');
+      } else if (data.error === 'Password too short') {
+        alert('Kata laluan terlalu pendek. Minimum 4 aksara.');
+      } else {
+        alert('Pendaftaran gagal.');
+      }
+
+      return false;
+    } catch (err) {
+      console.error('Register error:', err);
+      alert('Daftar gagal. Semak sambungan internet atau Apps Script.');
       return false;
     }
-
-    // prevent duplicates across demo + registered
-    const all = [...(mockUsers as any[]), ...registeredUsers];
-    if (all.some((u) => (u.email || '').toLowerCase() === emailTrimmed)) {
-      alert('Emel ini telah didaftarkan.\nSila log masuk.');
-      return false;
-    }
-
-    const newUser: StoredUser = {
-      id: `u${Date.now()}`,
-      name: nameTrimmed,
-      email: emailTrimmed,
-      password: password.trim(),
-      role,
-    };
-
-    const updated = [...registeredUsers, newUser];
-    setRegisteredUsers(updated);
-    localStorage.setItem(LOCAL_REGISTERED_KEY, JSON.stringify(updated));
-
-    // auto login after register
-    setUser(newUser);
-    localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(newUser));
-
-    return true;
   };
 
   const logout = () => {
@@ -130,8 +129,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const value = useMemo(
-    () => ({ user, loading, login, logout, register }),
-    [user, loading, registeredUsers]
+    () => ({
+      user,
+      loading,
+      login,
+      logout,
+      register,
+    }),
+    [user, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -139,6 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  if (!ctx) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
   return ctx;
 }
