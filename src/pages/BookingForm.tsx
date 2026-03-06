@@ -67,23 +67,7 @@ const ItemRow = React.memo(function ItemRow({
       <div className="mt-3 grid grid-cols-2 gap-2 md:mt-0 md:flex md:items-center md:gap-2">
 
         {/* Kuantiti */}
-        <input
-          type="number"
-          min={1}
-          value={item.kuantiti}
-          onChange={(e) =>
-            onItemChange(type, idx, 'kuantiti', Number(e.target.value))
-          }
-          className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
-        />
-
-        {/* Unit */}
-        <div className="flex items-center justify-center md:justify-start text-xs text-slate-500 md:w-10">
-          {item.unit}
-        </div>
-
-        {/* Saiz */}
-       <input
+<input
   type="number"
   min={1}
   value={item.kuantiti === 0 ? '' : item.kuantiti}
@@ -100,13 +84,6 @@ const ItemRow = React.memo(function ItemRow({
   }}
   className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
 />
-        {/* Unit khas */}
-        <UnitSelect
-          value={item.unit_khas ?? ''}
-          onChange={(v) =>
-            onItemChange(type, idx, 'unit_khas', v)
-          }
-        />
 
       </div>
 
