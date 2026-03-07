@@ -55,41 +55,65 @@ const ItemRow = React.memo(function ItemRow({
     value: any
   ) => void;
 }) {
-
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 md:border-0 md:bg-transparent md:p-0">
-
-      {/* Nama Item */}
       <div className="text-sm text-slate-700 font-medium md:font-normal md:text-slate-600">
         {item.nama}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 md:mt-0 md:flex md:items-center md:gap-2">
+        {/* Kuantiti utama */}
+        <input
+          type="number"
+          min={1}
+          value={item.kuantiti === 0 ? '' : item.kuantiti}
+          onFocus={(e) => {
+            if (item.kuantiti === 0) {
+              onItemChange(type, idx, 'kuantiti', '');
+            } else {
+              e.target.select();
+            }
+          }}
+          onChange={(e) => {
+            const v = e.target.value;
+            onItemChange(type, idx, 'kuantiti', v === '' ? 0 : Number(v));
+          }}
+          className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
+        />
 
-        {/* Kuantiti */}
-<input
-  type="number"
-  min={1}
-  value={item.kuantiti === 0 ? '' : item.kuantiti}
-  onFocus={(e) => {
-    if (item.kuantiti === 0) {
-      onItemChange(type, idx, 'kuantiti', '');
-    } else {
-      e.target.select();
-    }
-  }}
-  onChange={(e) => {
-    const v = e.target.value;
-    onItemChange(type, idx, 'kuantiti', v === '' ? 0 : Number(v));
-  }}
-  className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
-/>
+        {/* Unit biasa */}
+        <div className="flex items-center justify-center md:justify-start text-xs text-slate-500 md:w-10">
+          {item.unit}
+        </div>
 
+        {/* Kuantiti khas / saiz */}
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="Saiz"
+          value={item.unit_khas_nilai ?? ''}
+          onChange={(e) => {
+            const v = e.target.value.replace(/[^\d]/g, '');
+            onItemChange(
+              type,
+              idx,
+              'unit_khas_nilai',
+              v === '' ? undefined : Number(v)
+            );
+          }}
+          className="w-full md:w-20 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
+        />
+
+        {/* Unit khas */}
+        <UnitSelect
+          value={item.unit_khas ?? ''}
+          onChange={(v) => onItemChange(type, idx, 'unit_khas', v)}
+        />
       </div>
-
     </div>
   );
-});;
+});
 
 export default function BookingForm() {
   const { user } = useAuth();
