@@ -8,9 +8,9 @@ import { Sparkles, Loader2, Save } from 'lucide-react';
 
 type Item = {
   nama: string;
- kuantiti: number | '';
+  kuantiti: number | '';
   unit: string;
-  unit_khas_nilai?: string; // string supaya boleh taip 200 tanpa reset fokus
+  unit_khas_nilai?: number | '';
   unit_khas?: string;
 };
 
@@ -76,7 +76,12 @@ const ItemRow = React.memo(function ItemRow({
           }}
           onChange={(e) => {
             const v = e.target.value;
-            onItemChange(type, idx, 'kuantiti', v === '' ? 0 : Number(v));
+            onItemChange(type, idx, 'kuantiti', v === '' ? '' : Number(v));
+          }}
+          onBlur={() => {
+            if (item.kuantiti === '') {
+              onItemChange(type, idx, 'kuantiti', 0);
+            }
           }}
           className="w-full md:w-16 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
         />
@@ -86,21 +91,28 @@ const ItemRow = React.memo(function ItemRow({
           {item.unit}
         </div>
 
-        {/* Kuantiti khas / saiz */}
+        {/* Saiz / kuantiti khas */}
         <input
-          type="text"
+          type="number"
+          min={0}
           inputMode="numeric"
-          pattern="[0-9]*"
           placeholder="Saiz"
-          value={item.unit_khas_nilai ?? ''}
+          value={item.unit_khas_nilai === 0 ? '' : (item.unit_khas_nilai ?? '')}
+          onFocus={(e) => {
+            if (item.unit_khas_nilai === 0) {
+              onItemChange(type, idx, 'unit_khas_nilai', '');
+            } else if (item.unit_khas_nilai !== '' && item.unit_khas_nilai !== undefined) {
+              e.target.select();
+            }
+          }}
           onChange={(e) => {
-            const v = e.target.value.replace(/[^\d]/g, '');
-            onItemChange(
-              type,
-              idx,
-              'unit_khas_nilai',
-              v === '' ? undefined : Number(v)
-            );
+            const v = e.target.value;
+            onItemChange(type, idx, 'unit_khas_nilai', v === '' ? '' : Number(v));
+          }}
+          onBlur={() => {
+            if (item.unit_khas_nilai === '') {
+              onItemChange(type, idx, 'unit_khas_nilai', undefined);
+            }
           }}
           className="w-full md:w-20 px-2 py-2 md:py-1 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-emerald-500"
         />
@@ -147,7 +159,10 @@ export default function BookingForm() {
           exp.default_bahan.map((b) => ({
             ...b,
             kuantiti: b.kuantiti * bilKumpulan,
-            unit_khas_nilai: b.unit_khas_nilai !== undefined ? String(b.unit_khas_nilai) : '',
+            unit_khas_nilai:
+              b.unit_khas_nilai !== undefined && b.unit_khas_nilai !== null
+                ? Number(b.unit_khas_nilai)
+                : undefined,
           }))
         );
 
@@ -155,7 +170,10 @@ export default function BookingForm() {
           exp.default_radas.map((r) => ({
             ...r,
             kuantiti: r.kuantiti * bilKumpulan,
-            unit_khas_nilai: r.unit_khas_nilai !== undefined ? String(r.unit_khas_nilai) : '',
+            unit_khas_nilai:
+              r.unit_khas_nilai !== undefined && r.unit_khas_nilai !== null
+                ? Number(r.unit_khas_nilai)
+                : undefined,
           }))
         );
       }
@@ -175,14 +193,28 @@ export default function BookingForm() {
       const newBahan = await Promise.all(
         exp.default_bahan.map(async (b) => {
           const qty = await predictQuantity(b.nama, b.kuantiti, bilKumpulan, 'bahan');
-          return { ...b, kuantiti: qty, unit_khas_nilai: b.unit_khas_nilai !== undefined ? String(b.unit_khas_nilai) : '' };
+          return {
+            ...b,
+            kuantiti: qty,
+            unit_khas_nilai:
+              b.unit_khas_nilai !== undefined && b.unit_khas_nilai !== null
+                ? Number(b.unit_khas_nilai)
+                : undefined,
+          };
         })
       );
 
       const newRadas = await Promise.all(
         exp.default_radas.map(async (r) => {
           const qty = await predictQuantity(r.nama, r.kuantiti, bilKumpulan, 'radas');
-          return { ...r, kuantiti: qty, unit_khas_nilai: r.unit_khas_nilai !== undefined ? String(r.unit_khas_nilai) : '' };
+          return {
+            ...r,
+            kuantiti: qty,
+            unit_khas_nilai:
+              r.unit_khas_nilai !== undefined && r.unit_khas_nilai !== null
+                ? Number(r.unit_khas_nilai)
+                : undefined,
+          };
         })
       );
 
@@ -224,12 +256,20 @@ export default function BookingForm() {
 
     const bahanConverted = bahanList.map((x) => ({
       ...x,
-      unit_khas_nilai: x.unit_khas_nilai && x.unit_khas_nilai !== '' ? Number(x.unit_khas_nilai) : undefined,
+      kuantiti: x.kuantiti === '' ? 0 : Number(x.kuantiti),
+      unit_khas_nilai:
+        x.unit_khas_nilai === '' || x.unit_khas_nilai === undefined
+          ? undefined
+          : Number(x.unit_khas_nilai),
     }));
 
     const radasConverted = radasList.map((x) => ({
       ...x,
-      unit_khas_nilai: x.unit_khas_nilai && x.unit_khas_nilai !== '' ? Number(x.unit_khas_nilai) : undefined,
+      kuantiti: x.kuantiti === '' ? 0 : Number(x.kuantiti),
+      unit_khas_nilai:
+        x.unit_khas_nilai === '' || x.unit_khas_nilai === undefined
+          ? undefined
+          : Number(x.unit_khas_nilai),
     }));
 
     addBooking({
@@ -264,7 +304,6 @@ export default function BookingForm() {
         onSubmit={handleSubmit}
         className="space-y-8 bg-white p-4 md:p-8 rounded-2xl shadow-sm border border-slate-200"
       >
-        {/* Section 1: Maklumat Asas */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-2">Jenis Tempahan</label>
@@ -405,7 +444,6 @@ export default function BookingForm() {
           </div>
         </div>
 
-        {/* Section 2: Senarai Bahan & Radas */}
         {eksperimenId && (
           <div className="pt-6 border-t border-slate-200">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
@@ -423,7 +461,6 @@ export default function BookingForm() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Radas */}
               <div>
                 <h3 className="font-medium text-slate-700 mb-4 bg-slate-100 px-3 py-1.5 rounded-md inline-block">
                   Senarai Radas
@@ -440,7 +477,6 @@ export default function BookingForm() {
                 )}
               </div>
 
-              {/* Bahan */}
               <div>
                 <h3 className="font-medium text-slate-700 mb-4 bg-slate-100 px-3 py-1.5 rounded-md inline-block">
                   Senarai Bahan
@@ -458,7 +494,6 @@ export default function BookingForm() {
               </div>
             </div>
 
-            {/* Lain-lain & Catatan */}
             <div className="mt-8 space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
