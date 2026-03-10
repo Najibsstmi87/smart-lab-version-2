@@ -14,7 +14,8 @@ type DataContextType = {
   updateBookingStatus: (
     id: string,
     status: 'Approved' | 'Rejected',
-    catatan_makmal?: string
+    catatan_makmal?: string,
+    approved_by?: string
   ) => void;
 };
 
@@ -135,10 +136,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const updateBookingStatus = async (
     id: string,
     status: 'Approved' | 'Rejected',
-    catatan_makmal?: string
+    catatan_makmal?: string,
+    approved_by?: string
   ) => {
     const updatedBookings = bookings.map((b) =>
-      b.id === id ? { ...b, status, catatan_makmal } : b
+      b.id === id ? { ...b, status, catatan_makmal, approved_by: status === 'Approved' ? approved_by : b.approved_by } : b
     );
     setBookings(updatedBookings);
     localStorage.setItem(LS_BOOKINGS, JSON.stringify(updatedBookings));
@@ -171,6 +173,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           id,
           status,
           catatan_makmal: catatan_makmal || '',
+          approved_by: approved_by || '',
         }),
       });
     } catch (error) {

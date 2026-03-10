@@ -38,7 +38,7 @@ const handlePrint = (id: string) => {
 
   const handleStatusUpdate = () => {
     if (selectedBookingId && selectedStatus) {
-      updateBookingStatus(selectedBookingId, selectedStatus, catatan);
+      updateBookingStatus(selectedBookingId, selectedStatus, catatan, user?.name);
     }
     setModalOpen(false);
     setSelectedBookingId(null);

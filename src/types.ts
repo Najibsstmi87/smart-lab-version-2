@@ -46,5 +46,6 @@ export interface Booking {
   catatan_guru?: string;
   catatan_makmal?: string;
   status: 'Pending' | 'Approved' | 'Rejected';
+  approved_by?: string; // Nama pembantu makmal yang approved
   created_at: string; // ISO string
 }

@@ -216,8 +216,8 @@ if (user?.role === 'Guru' && booking.guru_id !== user.id) {
           </div>
           <div className="text-center">
             <div className="border-b border-slate-400 w-64 mx-auto mb-2"></div>
-            <p className="font-bold text-slate-900">Pembantu Makmal</p>
-            <p className="text-slate-600">Pengesahan Penyediaan</p>
+            <p className="font-bold text-slate-900">{booking.approved_by || 'Pembantu Makmal'}</p>
+            <p className="text-slate-600">Pembantu Makmal</p>
             <p className="text-slate-500 mt-1">Tarikh: ....................................</p>
           </div>
         </div>
