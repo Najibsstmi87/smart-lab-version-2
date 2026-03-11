@@ -65,9 +65,9 @@ export default function Layout() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
+    <div className="flex flex-col min-h-screen bg-slate-100">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 w-full">
+      <header className="bg-white border-b border-slate-200 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {/* Mobile menu button */}
@@ -100,9 +100,9 @@ export default function Layout() {
         </div>
       </header>
 
-      <div className="flex flex-1 w-full">
+      <div className="flex flex-1">
         {/* Desktop sidebar */}
-        <aside className="hidden md:block w-72 shrink-0 border-r border-slate-200 bg-white">
+        <aside className="hidden md:block w-72 flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
           <div className="p-4">
             <NavLinks />
           </div>
@@ -115,7 +115,7 @@ export default function Layout() {
               className="fixed inset-0 bg-black/40 z-40 md:hidden"
               onClick={closeMobileMenu}
             />
-            <aside className="fixed left-0 top-0 z-50 h-full w-72 bg-white shadow-xl md:hidden">
+            <aside className="fixed left-0 top-0 z-50 h-full w-72 bg-white shadow-xl md:hidden overflow-y-auto">
               <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
                 <div className="flex items-center gap-2 text-lg font-semibold text-slate-800">
                   <FlaskConical className="w-6 h-6 text-emerald-600" />
@@ -137,8 +137,10 @@ export default function Layout() {
         )}
 
         {/* Content */}
-        <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
 
