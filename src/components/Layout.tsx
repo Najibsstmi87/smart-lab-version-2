@@ -65,7 +65,7 @@ export default function Layout() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
@@ -137,14 +137,13 @@ export default function Layout() {
         )}
 
         {/* Content */}
-        <main className="flex-1 p-4 md:p-6">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 w-full">
+          <div className="mx-auto w-full max-w-7xl px-4 py-6">
             <Outlet />
           </div>
         </main>
       </div>
 
-      {/* Footer - Always visible at bottom */}
       <Footer />
     </div>
   );
