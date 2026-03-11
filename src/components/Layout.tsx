@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Footer from './Footer';
 import {
   FlaskConical,
   LogOut,
@@ -64,7 +65,7 @@ export default function Layout() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-100 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
@@ -99,9 +100,9 @@ export default function Layout() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto flex">
+      <div className="max-w-7xl mx-auto flex flex-1 w-full">
         {/* Desktop sidebar */}
-        <aside className="hidden md:block w-72 shrink-0 border-r border-slate-200 bg-white min-h-[calc(100vh-73px)]">
+        <aside className="hidden md:block w-72 shrink-0 border-r border-slate-200 bg-white">
           <div className="p-4">
             <NavLinks />
           </div>
@@ -140,6 +141,9 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
