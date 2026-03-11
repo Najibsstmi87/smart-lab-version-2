@@ -67,7 +67,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200">
+      <header className="bg-white border-b border-slate-200 w-full">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {/* Mobile menu button */}
@@ -100,7 +100,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto flex flex-1 w-full">
+      <div className="flex flex-1 w-full">
         {/* Desktop sidebar */}
         <aside className="hidden md:block w-72 shrink-0 border-r border-slate-200 bg-white">
           <div className="p-4">
@@ -137,7 +137,7 @@ export default function Layout() {
         )}
 
         {/* Content */}
-        <main className="flex-1 p-4 md:p-6">
+        <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6">
           <Outlet />
         </main>
       </div>
